@@ -1,8 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import React from 'react';
+import ReactDOM from 'react-dom';
 import { GameEngine } from './core/GameEngine.js';
 import { LoadingManager } from './core/LoadingManager.js';
-import Minimap from './components/Minimap.js';
+import Minimap from './components/Minimap.jsx';
 
 class ViimsiGame {
     constructor() {
@@ -15,21 +17,21 @@ class ViimsiGame {
         try {
             this.loadingManager.show();
             await this.loadingManager.simulateLoading(2000);
-            
+
             this.gameEngine = new GameEngine();
             await this.gameEngine.initialize();
-            
+
             this.loadingManager.hide();
-            
+
             this.gameEngine.start();
 
             // Setup the container for React UI components
             this.initializeUIContainer();
-            
+
             window.gameEngine = this.gameEngine;
-            
+
             this.startUIUpdates();
-            
+
             console.log('Viimsi Parish 3D Game initialized successfully!');
             console.log('Click the canvas to enter first-person mode, then use WASD to move around');
         } catch (error) {
@@ -75,10 +77,10 @@ class ViimsiGame {
                     debugContent.innerHTML = info;
                 }
             }
-            
+
             requestAnimationFrame(updateUI);
         };
-        
+
         updateUI();
     }
 }
