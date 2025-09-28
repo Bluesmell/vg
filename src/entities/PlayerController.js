@@ -289,6 +289,16 @@ export class PlayerController {
             this.physicsBody.velocity.x *= 0.8;
             this.physicsBody.velocity.z *= 0.8;
         }
+
+        // Limit horizontal velocity to max sprint speed
+        const maxSpeed = this.moveSpeed * this.sprintMultiplier;
+        const horizontalVelocity = Math.sqrt(this.physicsBody.velocity.x ** 2 + this.physicsBody.velocity.z ** 2);
+
+        if (horizontalVelocity > maxSpeed) {
+            const factor = maxSpeed / horizontalVelocity;
+            this.physicsBody.velocity.x *= factor;
+            this.physicsBody.velocity.z *= factor;
+        }
         
         // Update position from physics body
         this.position.copy(this.physicsBody.position);

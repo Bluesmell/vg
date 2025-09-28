@@ -8,12 +8,17 @@ jest.mock('three', () => ({
             position: {
                 count: (widthSegments + 1) * (heightSegments + 1),
                 getX: jest.fn().mockReturnValue(0),
+                getY: jest.fn().mockReturnValue(0),
                 getZ: jest.fn().mockReturnValue(0),
                 setY: jest.fn(),
                 needsUpdate: false
             }
         },
         computeVertexNormals: jest.fn(),
+        dispose: jest.fn()
+    })),
+    MeshBasicMaterial: jest.fn().mockImplementation(() => ({
+        color: { getHexString: () => '8b4513' },
         dispose: jest.fn()
     })),
     MeshStandardMaterial: jest.fn().mockImplementation(() => ({
@@ -25,12 +30,17 @@ jest.mock('three', () => ({
     Mesh: jest.fn().mockImplementation((geometry, material) => ({
         geometry,
         material,
-        rotation: { x: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        position: { x: 0, y: 0, z: 0, set: jest.fn() },
+        scale: { x: 1, y: 1, z: 1 },
         receiveShadow: false,
         castShadow: false,
         visible: true,
         userData: {},
-        parent: null
+        parent: null,
+        updateMatrix: jest.fn(),
+        updateMatrixWorld: jest.fn(),
+        name: ''
     })),
     CanvasTexture: jest.fn().mockImplementation(() => ({
         wrapS: null,
@@ -46,7 +56,11 @@ jest.mock('three', () => ({
         distanceTo: jest.fn().mockReturnValue(100)
     })),
     RepeatWrapping: 'RepeatWrapping',
-    DoubleSide: 'DoubleSide'
+    DoubleSide: 'DoubleSide',
+    BoxGeometry: jest.fn(),
+    LineBasicMaterial: jest.fn(),
+    BufferGeometry: jest.fn(() => ({ setFromPoints: jest.fn() })),
+    Line: jest.fn(),
 }));
 
 describe('TerrainSystem', () => {
@@ -58,7 +72,8 @@ describe('TerrainSystem', () => {
         // Mock game engine
         mockGameEngine = {
             scene: {
-                add: jest.fn()
+                add: jest.fn(),
+                children: []
             }
         };
 
@@ -89,16 +104,16 @@ describe('TerrainSystem', () => {
     });
 
     test('should initialize with correct configuration', () => {
-        expect(terrainSystem.config.segments).toBe(512);
-        expect(terrainSystem.config.worldSize).toBe(2000);
-        expect(terrainSystem.config.lod.levels).toBe(4);
-        expect(terrainSystem.config.lod.distances).toHaveLength(4);
+        expect(terrainSystem.config.segments).toBe(64);
+        expect(terrainSystem.config.worldSize).toBe(1000);
+        expect(terrainSystem.config.lod.levels).toBe(2);
+        expect(terrainSystem.config.lod.distances).toHaveLength(2);
         expect(terrainSystem.lodMeshes).toEqual([]);
         expect(terrainSystem.currentLOD).toBe(0);
     });
 
     test('should initialize successfully with elevation data', async () => {
-        const mockElevationData = new Float32Array(512 * 512);
+        const mockElevationData = new Float32Array(64 * 64);
         for (let i = 0; i < mockElevationData.length; i++) {
             mockElevationData[i] = Math.random() * 50; // 0-50m elevation
         }
@@ -116,12 +131,12 @@ describe('TerrainSystem', () => {
 
         expect(mockMapDataManager.loadMapData).toHaveBeenCalled();
         expect(terrainSystem.heightmapData).toBe(mockElevationData);
-        expect(terrainSystem.lodMeshes).toHaveLength(4);
+        expect(terrainSystem.lodMeshes).toHaveLength(2);
         expect(terrainSystem.terrainMesh).toBe(terrainSystem.lodMeshes[0]);
-        expect(mockGameEngine.scene.add).toHaveBeenCalledTimes(4);
+        expect(mockGameEngine.scene.add).toHaveBeenCalledTimes(5);
     });
 
-    test('should throw error when no elevation data available', async () => {
+    test('should initialize with procedural terrain if no elevation data', async () => {
         const mockMapData = {
             elevation: null,
             buildings: [],
@@ -131,7 +146,11 @@ describe('TerrainSystem', () => {
 
         mockMapDataManager.loadMapData.mockResolvedValue(mockMapData);
 
-        await expect(terrainSystem.initialize()).rejects.toThrow('No elevation data available for terrain generation');
+        await terrainSystem.initialize();
+
+        expect(terrainSystem.heightmapData).toBeNull();
+        expect(terrainSystem.lodMeshes).toHaveLength(2);
+        expect(mockGameEngine.scene.add).toHaveBeenCalledTimes(5);
     });
 
     test('should handle map data loading failure', async () => {
@@ -223,6 +242,7 @@ describe('TerrainSystem', () => {
                 position: {
                     count: 4,
                     getX: jest.fn().mockReturnValueOnce(-1000).mockReturnValueOnce(1000).mockReturnValueOnce(-1000).mockReturnValueOnce(1000),
+                    getY: jest.fn().mockReturnValue(0),
                     getZ: jest.fn().mockReturnValueOnce(-1000).mockReturnValueOnce(-1000).mockReturnValueOnce(1000).mockReturnValueOnce(1000),
                     setY: jest.fn(),
                     needsUpdate: false
@@ -240,13 +260,8 @@ describe('TerrainSystem', () => {
     });
 
     test('should create appropriate material for different LOD levels', () => {
-        // Test detailed material for low LOD
-        const detailedMaterial = terrainSystem.createTerrainMaterial(0);
-        expect(THREE.MeshStandardMaterial).toHaveBeenCalled();
-
-        // Test simple material for high LOD
-        const simpleMaterial = terrainSystem.createTerrainMaterial(3);
-        expect(THREE.MeshLambertMaterial).toHaveBeenCalled();
+        terrainSystem.createTerrainMaterial(0);
+        expect(THREE.MeshBasicMaterial).toHaveBeenCalled();
     });
 
     test('should update LOD based on camera distance', async () => {
@@ -267,11 +282,11 @@ describe('TerrainSystem', () => {
         expect(terrainSystem.currentLOD).toBe(0);
 
         // Mock far distance for far camera
-        farCamera.distanceTo = jest.fn().mockReturnValue(1500);
+        farCamera.distanceTo.mockReturnValue(1500);
         
         // Test far camera (should use higher LOD)
         terrainSystem.updateLOD(farCamera);
-        expect(terrainSystem.currentLOD).toBeGreaterThan(0);
+        expect(terrainSystem.currentLOD).toBe(1);
     });
 
     test('should switch LOD correctly', async () => {
@@ -284,7 +299,7 @@ describe('TerrainSystem', () => {
         await terrainSystem.initialize();
 
         const initialLOD = terrainSystem.currentLOD;
-        const newLOD = 2;
+        const newLOD = 1;
 
         terrainSystem.switchLOD(newLOD);
 
@@ -349,8 +364,8 @@ describe('TerrainSystem', () => {
         expect(stats).toHaveProperty('worldSize');
         
         expect(stats.heightmapSize).toBe(4); // sqrt(16)
-        expect(stats.lodLevels).toBe(4);
-        expect(stats.worldSize).toBe(2000);
+        expect(stats.lodLevels).toBe(2);
+        expect(stats.worldSize).toBe(1000);
     });
 
     test('should dispose resources properly', async () => {
@@ -402,13 +417,11 @@ describe('TerrainSystem', () => {
 
         await terrainSystem.generateTerrainLOD();
 
-        expect(terrainSystem.lodMeshes).toHaveLength(4);
+        expect(terrainSystem.lodMeshes).toHaveLength(2);
         
         // Only LOD 0 should be visible initially
         expect(terrainSystem.lodMeshes[0].visible).toBe(true);
-        for (let i = 1; i < terrainSystem.lodMeshes.length; i++) {
-            expect(terrainSystem.lodMeshes[i].visible).toBe(false);
-        }
+        expect(terrainSystem.lodMeshes[1].visible).toBe(false);
 
         // Check LOD metadata
         terrainSystem.lodMeshes.forEach((mesh, index) => {

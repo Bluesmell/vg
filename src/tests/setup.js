@@ -2,29 +2,56 @@
 
 // Mock Three.js for testing
 global.THREE = {
-  WebGLRenderer: jest.fn(),
-  Scene: jest.fn(() => ({
-    add: jest.fn(),
-    remove: jest.fn(),
-    traverse: jest.fn()
-  })),
-  PerspectiveCamera: jest.fn(),
-  Clock: jest.fn(() => ({
-    getDelta: jest.fn(() => 0.016)
-  })),
-  Vector3: jest.fn(),
-  Euler: jest.fn(),
-  Color: jest.fn(),
-  Fog: jest.fn(),
-  AmbientLight: jest.fn(),
-  DirectionalLight: jest.fn(),
-  PlaneGeometry: jest.fn(),
-  MeshLambertMaterial: jest.fn(),
-  MeshBasicMaterial: jest.fn(),
-  BoxGeometry: jest.fn(),
-  SphereGeometry: jest.fn(),
-  CylinderGeometry: jest.fn(),
-  Mesh: jest.fn()
+    WebGLRenderer: jest.fn(() => ({
+        setSize: jest.fn(),
+        setPixelRatio: jest.fn(),
+        render: jest.fn(),
+        domElement: document.createElement('canvas'),
+    })),
+    Scene: jest.fn(() => ({
+        add: jest.fn(),
+        remove: jest.fn(),
+        traverse: jest.fn(),
+    })),
+    PerspectiveCamera: jest.fn(() => ({
+        aspect: 1,
+        updateProjectionMatrix: jest.fn(),
+    })),
+    Clock: jest.fn(() => ({
+        getDelta: jest.fn(() => 0.016),
+    })),
+    Vector3: jest.fn(),
+    Euler: jest.fn(),
+    Color: jest.fn(function() { return this; }),
+    Fog: jest.fn(),
+    AmbientLight: jest.fn(),
+    DirectionalLight: jest.fn(),
+    PlaneGeometry: jest.fn(() => ({
+        attributes: { position: { array: [], count: 0, needsUpdate: false } },
+        computeVertexNormals: jest.fn(),
+    })),
+    MeshLambertMaterial: jest.fn(() => ({})),
+    MeshBasicMaterial: jest.fn(() => ({ color: {} })),
+    BoxGeometry: jest.fn(() => ({})),
+    SphereGeometry: jest.fn(() => ({})),
+    CylinderGeometry: jest.fn(() => ({})),
+    Mesh: jest.fn(() => ({
+        position: { set: jest.fn() },
+        rotation: { x: 0 },
+        visible: true,
+        updateMatrix: jest.fn(),
+        updateMatrixWorld: jest.fn(),
+        name: '',
+        userData: {},
+        geometry: { attributes: { position: { count: 0 } }, dispose: jest.fn() },
+        material: { color: {}, dispose: jest.fn() },
+    })),
+    DoubleSide: 2,
+    CanvasTexture: jest.fn(),
+    RepeatWrapping: 1000,
+    LineBasicMaterial: jest.fn(),
+    BufferGeometry: jest.fn(() => ({ setFromPoints: jest.fn() })),
+    Line: jest.fn(),
 };
 
 // Mock Cannon.js for testing

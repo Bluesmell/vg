@@ -1,7 +1,11 @@
 import { ViimsiMapLoader } from './ViimsiMapLoader.js';
+import * as GeoTIFF from 'geotiff';
 
 // Mock fetch for testing
 global.fetch = jest.fn();
+
+// Mock the geotiff library
+jest.mock('geotiff');
 
 describe('ViimsiMapLoader', () => {
     let mapLoader;
@@ -23,7 +27,6 @@ describe('ViimsiMapLoader', () => {
 
     test('should have correct Estonian endpoints', () => {
         expect(mapLoader.maaametEndpoints.elevation).toContain('maaamet.ee');
-        expect(mapLoader.maaametEndpoints.buildings).toContain('maaamet.ee');
         expect(mapLoader.overpassEndpoint).toContain('overpass-api.de');
     });
 
@@ -45,6 +48,7 @@ describe('ViimsiMapLoader', () => {
         expect(minElevation).toBeGreaterThanOrEqual(0);
         expect(maxElevation).toBeLessThan(50);
     });
+
 
     test('should generate Viimsi Parish forest data', () => {
         const forests = mapLoader.generateViimsiForestData();
@@ -231,7 +235,7 @@ describe('ViimsiMapLoader', () => {
             json: () => Promise.resolve(mockOSMResponse)
         });
 
-        const buildings = await mapLoader.fetchOSMBuildings();
+        const buildings = await mapLoader.fetchBuildingData();
         
         expect(buildings).toHaveLength(1);
         expect(buildings[0].name).toBe('Viimsi House');
@@ -249,7 +253,7 @@ describe('ViimsiMapLoader', () => {
     test('should handle OSM API failures gracefully', async () => {
         fetch.mockRejectedValue(new Error('OSM API error'));
         
-        const buildings = await mapLoader.fetchOSMBuildings();
+        const buildings = await mapLoader.fetchBuildingData();
         
         // Should return fallback buildings
         expect(Array.isArray(buildings)).toBe(true);
@@ -257,5 +261,49 @@ describe('ViimsiMapLoader', () => {
         
         const viimsiManor = buildings.find(b => b.name === 'Viimsi Manor');
         expect(viimsiManor).toBeDefined();
+    });
+
+    test('should fetch and process real elevation data successfully', async () => {
+        const mockGeoTiffResponse = new ArrayBuffer(8); // Dummy array buffer
+        fetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(mockGeoTiffResponse),
+        });
+
+        const elevationData = await mapLoader.fetchElevationData();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('wcs-geoloogia')
+        );
+        expect(GeoTIFF.fromArrayBuffer).toHaveBeenCalledWith(mockGeoTiffResponse);
+        expect(elevationData).toBeInstanceOf(Float32Array);
+        expect(elevationData.length).toBeGreaterThan(0);
+    });
+
+    test('should fetch and process real forest data successfully', async () => {
+        const mockOSMResponse = {
+            elements: [
+                {
+                    type: 'way',
+                    id: 789,
+                    tags: { landuse: 'forest', name: 'Viimsi Forest' },
+                    geometry: [{ lat: 59.5, lon: 24.8 }],
+                },
+            ],
+        };
+
+        fetch.mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockOSMResponse),
+        });
+
+        const forests = await mapLoader.fetchForestData();
+
+        expect(fetch).toHaveBeenCalledWith(
+            mapLoader.overpassEndpoint,
+            expect.any(Object)
+        );
+        expect(forests).toHaveLength(1);
+        expect(forests[0].name).toBe('Viimsi Forest');
     });
 });

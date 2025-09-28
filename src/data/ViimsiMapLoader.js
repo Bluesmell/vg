@@ -1,3 +1,5 @@
+import * as GeoTIFF from 'geotiff';
+
 /**
  * ViimsiMapLoader - Loads real Estonian map data for Viimsi Parish
  * Integrates with Maa-amet (Estonian Land Board) WMS services and OpenStreetMap
@@ -17,7 +19,7 @@ export class ViimsiMapLoader {
         this.maaametEndpoints = {
             // WFS for actual data (not WMS which returns images)
             wfs: 'https://kaart.maaamet.ee/wfs/hooned',
-            elevation: 'https://kaart.maaamet.ee/wms/alus',
+            elevation: 'https://teenus.maaamet.ee/ows/wcs-geoloogia', // Switched to WCS for real elevation data
             // Use OpenStreetMap for most data due to CORS and API access issues
             useOSMFallback: true
         };
@@ -84,29 +86,28 @@ export class ViimsiMapLoader {
         }
 
         try {
-            console.log('Fetching elevation data from Maa-amet for Viimsi Parish...');
+            console.log('Fetching REAL elevation data from Maa-amet WCS for Viimsi Parish...');
 
-            // Construct WMS request for elevation data
-            const wmsParams = new URLSearchParams({
-                service: 'WMS',
-                version: '1.3.0',
-                request: 'GetMap',
-                layers: 'reljeef',
-                styles: '',
-                format: 'image/png',
+            // Construct WCS request for elevation data (GeoTIFF format)
+            const wcsParams = new URLSearchParams({
+                service: 'WCS',
+                version: '1.0.0',
+                request: 'GetCoverage',
+                coverage: 'Sete_reljeef', // Sedimentary bedrock relief
                 crs: 'EPSG:4326',
                 bbox: `${this.viimsiParishBounds.west},${this.viimsiParishBounds.south},${this.viimsiParishBounds.east},${this.viimsiParishBounds.north}`,
-                width: '512',
-                height: '512'
+                width: '256', // Reduced resolution for faster testing
+                height: '256',
+                format: 'GeoTIFF'
             });
 
-            const response = await fetch(`${this.maaametEndpoints.elevation}?${wmsParams}`);
+            const response = await fetch(`${this.maaametEndpoints.elevation}?${wcsParams}`);
 
             if (!response.ok) {
-                throw new Error(`Maa-amet elevation request failed: ${response.status}`);
+                throw new Error(`Maa-amet WCS request failed: ${response.status}`);
             }
 
-            // Convert image to elevation data
+            // Process the GeoTIFF response
             const elevationData = await this.processElevationImage(response);
 
             // Cache the result
@@ -115,11 +116,11 @@ export class ViimsiMapLoader {
                 timestamp: Date.now()
             });
 
-            console.log('Elevation data loaded from Maa-amet');
+            console.log('✅ Real elevation data loaded from Maa-amet WCS');
             return elevationData;
 
         } catch (error) {
-            console.warn('Maa-amet elevation data failed, generating fallback:', error.message);
+            console.warn('Maa-amet WCS data failed, generating fallback:', error.message);
             return this.generateFallbackElevation();
         }
     }
@@ -195,19 +196,37 @@ export class ViimsiMapLoader {
         }
 
         try {
-            console.log('Fetching forest data for Viimsi Parish...');
+            console.log('🌲 Fetching REAL forest data from OpenStreetMap for Viimsi Parish...');
+            const overpassQuery = `
+                [out:json][timeout:30];
+                (
+                    way["landuse"="forest"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
+                    relation["landuse"="forest"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
+                    way["natural"="wood"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
+                    relation["natural"="wood"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
+                );
+                out geom;
+            `;
 
-            // For now, return mock forest data based on known Viimsi Parish forests
-            const forests = this.generateViimsiForestData();
-
-            this.cache.set(cacheKey, {
-                data: forests,
-                timestamp: Date.now()
+            const response = await fetch(this.overpassEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `data=${encodeURIComponent(overpassQuery)}`
             });
 
+            if (!response.ok) {
+                throw new Error(`OpenStreetMap request for forests failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const forests = this.processOSMForests(data.elements);
+
+            this.cache.set(cacheKey, { data: forests, timestamp: Date.now() });
+
+            console.log(`✅ Loaded ${forests.length} real forest areas from OpenStreetMap`);
             return forests;
         } catch (error) {
-            console.warn('Forest data loading failed:', error.message);
+            console.warn('Forest data loading failed, returning empty array:', error.message);
             return [];
         }
     }
@@ -280,6 +299,7 @@ export class ViimsiMapLoader {
         }
     }
 
+
     /**
      * Fetch roads from OpenStreetMap Overpass API
      * @returns {Promise<Array>} Road data from OSM
@@ -326,10 +346,23 @@ export class ViimsiMapLoader {
      * @returns {Promise<Float32Array>} Processed elevation data
      */
     async processElevationImage(response) {
-        // This would normally process the actual elevation image
-        // For now, return a realistic heightmap for Viimsi Parish
-        console.log('Processing elevation image for Viimsi Parish...');
-        return this.generateFallbackElevation();
+        console.log('Processing GeoTIFF elevation data...');
+        try {
+            const arrayBuffer = await response.arrayBuffer();
+            const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+            const image = await tiff.getImage();
+            const data = await image.readRasters();
+
+            // The data is a single-band Float32Array with elevation values
+            const elevationData = data[0];
+
+            console.log(`✅ Successfully processed GeoTIFF: ${elevationData.length} data points`);
+            return elevationData;
+        } catch (error) {
+            console.error('❌ Failed to process GeoTIFF data:', error);
+            // Fallback if processing fails
+            return this.generateFallbackElevation();
+        }
     }
 
     /**
@@ -423,6 +456,32 @@ export class ViimsiMapLoader {
                 height: 15
             }
         ];
+    }
+
+    /**
+     * Process OpenStreetMap forest data
+     * @param {Array} elements - OSM elements
+     * @returns {Array} Processed forest data
+     */
+    processOSMForests(elements) {
+        return elements
+            .filter(element => element.type === 'way' && element.geometry)
+            .map(forest => {
+                const bounds = {
+                    north: Math.max(...forest.geometry.map(p => p.lat)),
+                    south: Math.min(...forest.geometry.map(p => p.lat)),
+                    east: Math.max(...forest.geometry.map(p => p.lon)),
+                    west: Math.min(...forest.geometry.map(p => p.lon)),
+                };
+                return {
+                    id: forest.id,
+                    name: forest.tags.name || 'Forest Area',
+                    type: forest.tags.landuse || forest.tags.natural,
+                    geometry: forest.geometry,
+                    bounds: bounds,
+                    tags: forest.tags,
+                };
+            });
     }
 
     /**
@@ -612,37 +671,7 @@ export class ViimsiMapLoader {
         return stats;
     }
 
-    /**
-     * Fetch real building data from OpenStreetMap
-     * @returns {Promise<Array>} Real building data from OSM
-     */
-    async fetchOSMBuildings() {
-        const query = `
-            [out:json][timeout:25];
-            (
-                way["building"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
-                relation["building"](${this.viimsiParishBounds.south},${this.viimsiParishBounds.west},${this.viimsiParishBounds.north},${this.viimsiParishBounds.east});
-            );
-            out geom;
-        `;
 
-        const response = await fetch(this.overpassEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `data=${encodeURIComponent(query)}`
-        });
-
-        if (!response.ok) {
-            throw new Error(`OpenStreetMap API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`📊 OpenStreetMap returned ${data.elements.length} building elements`);
-        
-        return this.processOSMBuildings(data.elements);
-    }
 
     /**
      * Fetch real road data from OpenStreetMap

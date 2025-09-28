@@ -63,7 +63,7 @@ describe('GameEngine', () => {
         gameEngine.initializeCamera = jest.fn();
         gameEngine.initializePhysics = jest.fn();
         gameEngine.initializeLighting = jest.fn();
-        gameEngine.addTemporaryGround = jest.fn();
+        gameEngine.initializeTerrainSystems = jest.fn();
         gameEngine.initializePlayerSystems = jest.fn();
 
         await gameEngine.initialize();
@@ -73,7 +73,7 @@ describe('GameEngine', () => {
         expect(gameEngine.initializeCamera).toHaveBeenCalled();
         expect(gameEngine.initializePhysics).toHaveBeenCalled();
         expect(gameEngine.initializeLighting).toHaveBeenCalled();
-        expect(gameEngine.addTemporaryGround).toHaveBeenCalled();
+        expect(gameEngine.initializeTerrainSystems).toHaveBeenCalled();
         expect(gameEngine.initializePlayerSystems).toHaveBeenCalled();
     });
 

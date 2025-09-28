@@ -1,18 +1,6 @@
 import { GameEngine } from './GameEngine.js';
 import { PlayerController } from '../entities/PlayerController.js';
-
-// Mock Three.js and Cannon.js
-const mockPhysicsWorld = {
-    addBody: jest.fn(),
-    removeBody: jest.fn(),
-    addContactMaterial: jest.fn(),
-    step: jest.fn(),
-    bodies: [],
-    defaultContactMaterial: {
-        friction: 0,
-        restitution: 0
-    }
-};
+import * as CANNON from 'cannon-es';
 
 const mockPhysicsBody = {
     position: { x: 0, y: 5, z: 10, copy: jest.fn(), set: jest.fn() },
@@ -25,28 +13,43 @@ const mockPhysicsBody = {
     addEventListener: jest.fn()
 };
 
-// Mock CANNON objects
-global.CANNON = {
-    ...global.CANNON,
-    World: jest.fn(() => mockPhysicsWorld),
-    Body: jest.fn(() => mockPhysicsBody),
-    Vec3: jest.fn(),
-    Material: jest.fn(),
-    ContactMaterial: jest.fn(),
-    SAPBroadphase: jest.fn(),
-    Sphere: jest.fn(),
-    Cylinder: jest.fn(),
-    Box: jest.fn(),
-    Plane: jest.fn(),
-    Shape: {
-        types: {
-            PLANE: 1,
-            BOX: 2,
-            SPHERE: 4,
-            CYLINDER: 8
-        }
-    }
+const mockPhysicsWorld = {
+    addBody: jest.fn(),
+    removeBody: jest.fn(),
+    addContactMaterial: jest.fn(),
+    step: jest.fn(),
+    bodies: [],
+    defaultContactMaterial: {
+        friction: 0,
+        restitution: 0
+    },
+    solver: {
+        iterations: 10,
+        tolerance: 0.1,
+    },
 };
+
+jest.mock('cannon-es', () => ({
+  __esModule: true,
+  World: jest.fn(() => mockPhysicsWorld),
+  Body: jest.fn(() => mockPhysicsBody),
+  Vec3: jest.fn(),
+  Material: jest.fn(),
+  ContactMaterial: jest.fn(),
+  SAPBroadphase: jest.fn(),
+  Sphere: jest.fn(),
+  Cylinder: jest.fn(),
+  Box: jest.fn(),
+  Plane: jest.fn(),
+  Shape: {
+      types: {
+          PLANE: 1,
+          BOX: 2,
+          SPHERE: 4,
+          CYLINDER: 8
+      }
+  }
+}));
 
 describe('Physics System', () => {
     let gameEngine;
@@ -206,6 +209,7 @@ describe('Physics System', () => {
         expect(playerController.physicsBody.addEventListener).toHaveBeenCalledWith('collide', expect.any(Function));
     });
 
+
     test('should limit horizontal velocity', () => {
         const mockCamera = {
             position: { x: 0, y: 0, z: 0, copy: jest.fn() },
@@ -236,7 +240,7 @@ describe('Physics System', () => {
         const horizontalVelocity = Math.sqrt(
             mockPhysicsBody.velocity.x ** 2 + mockPhysicsBody.velocity.z ** 2
         );
-        expect(horizontalVelocity).toBeLessThanOrEqual(playerController.moveSpeed);
+        expect(horizontalVelocity).toBeLessThanOrEqual(playerController.moveSpeed * playerController.sprintMultiplier);
     });
 
     test('should clean up physics body on dispose', () => {

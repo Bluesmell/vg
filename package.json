@@ -22,6 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "cannon-es": "^0.20.0",
+    "geotiff": "^2.1.4-beta.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.158.0"
