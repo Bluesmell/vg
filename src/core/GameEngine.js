@@ -215,23 +215,7 @@ export class GameEngine {
             this.createSimpleTestTerrain();
         }
         
-        // Add test cube for reference
-        this.addTestCube();
-        
-        // Add emergency visibility test - bright cube that should definitely be visible
-        this.addEmergencyVisibilityTest();
-        
-        // FORCE VISIBLE TERRAIN - Override any terrain issues
-        this.addForceVisibleTerrain();
-        
-        // Add simple horizontal ground plane as backup
-        this.addSimpleGroundPlane();
-        
-        // DIRECTLY add Viimsi Parish features (bypass API loading)
-        this.addDirectViimsiFeatures();
-        
-        // Add terrain center marker for debugging
-        this.addTerrainCenterMarker();
+        // Debug objects are no longer needed, minimap provides orientation
         
         // Debug: Check what's actually in the scene
         console.log('🔍 SCENE DEBUG - Total children:', this.scene.children.length);
