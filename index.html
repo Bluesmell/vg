@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viimsi Parish 3D Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .ui-element {
+            pointer-events: auto;
+        }
+        
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 1000;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            background: #10b981;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <h1>Viimsi Parish 3D Game</h1>
+        <div class="loading-text">Loading Viimsi Parish...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loading-progress"></div>
+        </div>
+    </div>
+    
+    <canvas id="game-canvas"></canvas>
+    
+    <div id="ui-overlay">
+        <div id="react-ui"></div>
+        
+        <!-- Instructions panel -->
+        <div id="instructions" class="ui-element" style="
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            max-width: 300px;
+        ">
+            <h3 style="margin: 0 0 10px 0; color: #3b82f6;">🇪🇪 Viimsi Parish Controls</h3>
+            <div><strong>Click canvas</strong> to enter first-person mode</div>
+            <div><strong>WASD:</strong> Move around</div>
+            <div><strong>Mouse:</strong> Look around</div>
+            <div><strong>Shift:</strong> Sprint</div>
+            <div><strong>Ctrl:</strong> Crouch</div>
+            <div><strong>ESC:</strong> Exit first-person mode</div>
+            <div><strong>F6:</strong> Reset camera view</div>
+            <div><strong>F7:</strong> Camera debug info</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #94a3b8;">
+                Explore the Estonian landscape of Viimsi Parish!
+            </div>
+        </div>
+        
+        <!-- Debug info panel -->
+        <div id="debug-info" class="ui-element" style="
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            max-width: 350px;
+        ">
+            <h3 style="margin: 0 0 10px 0; color: #10b981;">🔍 Scene Debug Info</h3>
+            <div id="debug-content">Loading...</div>
+        </div>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

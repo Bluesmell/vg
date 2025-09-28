@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estonian-themed custom styles */
+@layer base {
+  body {
+    @apply font-estonian;
+  }
+}
+
+@layer components {
+  .viimsi-button {
+    @apply bg-viimsi-blue hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+  
+  .estonian-panel {
+    @apply bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg;
+  }
+  
+  .minimap-container {
+    @apply absolute top-4 right-4 w-64 h-64 estonian-panel p-2;
+  }
+  
+  .inventory-grid {
+    @apply grid grid-cols-8 gap-1 p-4;
+  }
+  
+  .inventory-slot {
+    @apply w-12 h-12 border-2 border-gray-300 rounded bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer;
+  }
+  
+  .quest-item {
+    @apply p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer;
+  }
+  
+  .weather-widget {
+    @apply absolute top-4 left-4 estonian-panel p-4 min-w-48;
+  }
+}
