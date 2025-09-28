@@ -1,4 +1,5 @@
 import { PlayerController } from './PlayerController.js';
+import * as CANNON from 'cannon-es';
 
 // Mock Three.js objects
 const mockCamera = {
@@ -29,13 +30,13 @@ const mockPhysicsBody = {
     addEventListener: jest.fn()
 };
 
-// Mock CANNON objects for PlayerController
-global.CANNON = {
-    ...global.CANNON,
+jest.mock('cannon-es', () => ({
+    __esModule: true,
     Body: jest.fn(() => mockPhysicsBody),
     Sphere: jest.fn(),
-    Cylinder: jest.fn()
-};
+    Cylinder: jest.fn(),
+    Vec3: jest.fn()
+}));
 
 // Mock document methods
 Object.defineProperty(document, 'pointerLockElement', {
@@ -64,8 +65,8 @@ describe('PlayerController', () => {
 
     test('should initialize with default values', () => {
         expect(playerController.position.x).toBe(0);
-        expect(playerController.position.y).toBe(5);
-        expect(playerController.position.z).toBe(10);
+        expect(playerController.position.y).toBe(50);
+        expect(playerController.position.z).toBe(200);
         expect(playerController.moveSpeed).toBe(10.0);
         expect(playerController.isGrounded).toBe(true);
     });
