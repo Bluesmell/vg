@@ -667,6 +667,20 @@ export class TerrainSystem {
     }
 
     /**
+     * Get the world boundaries for the minimap
+     * @returns {Object} World boundaries
+     */
+    getWorldBounds() {
+        const size = this.config.worldSize / 2;
+        return {
+            minX: -size,
+            maxX: size,
+            minZ: -size,
+            maxZ: size,
+        };
+    }
+
+    /**
      * Add real Viimsi Parish features to the terrain
      */
     addRealViimsiFeatures() {

@@ -15,12 +15,13 @@ export default defineConfig({
         manualChunks: {
           'three': ['three'],
           'cannon': ['cannon-es'],
-          'react': ['react', 'react-dom']
+          'react': ['react', 'react-dom'],
+          'geotiff': ['geotiff']
         }
       }
     }
   },
   optimizeDeps: {
-    include: ['three', 'cannon-es']
+    include: ['three', 'cannon-es', 'geotiff']
   }
 })
