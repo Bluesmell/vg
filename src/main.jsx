@@ -1,7 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import React from 'react';
-import ReactDOM from 'react-dom';
 import { GameEngine } from './core/GameEngine.js';
 import { LoadingManager } from './core/LoadingManager.js';
 import Minimap from './components/Minimap.jsx';
